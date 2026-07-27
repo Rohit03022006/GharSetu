@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model FinanceRate {
+  id               String   @id @default(uuid())
+  state            String   @unique
+  stampDutyPercent Float
+  regPercent       Float
+  gstPercent       Float    @default(5.0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("finance_rates")
+}

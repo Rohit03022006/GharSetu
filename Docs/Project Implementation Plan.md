@@ -370,14 +370,15 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 
 **Goal:** Simplest service in the system — deliberately scheduled early to prove the multi-service pattern (own repo/DB/container/Helm chart) cheaply before tackling anything harder.
 
-- [ ] Design `finance_db` schema (`Finance_Rates` table, state-wise seeded data for at least 5 major states)
-- [ ] Implement EMI calculation endpoint (FR-FIN-01, UC-FS-01)
-- [ ] Implement Stamp Duty + Registration Cost endpoints, reading from `Finance_Rates` (FR-FIN-02, UC-FS-02)
-- [ ] Implement GST endpoint with construction-status logic (FR-FIN-03)
-- [ ] Implement Maintenance Estimator endpoint (FR-FIN-04)
-- [ ] Implement Admin-only rate update endpoint (FR-FIN-06, UC-FS-03)
-- [ ] Unit tests for every calculator against known correct outputs (this is pure-function logic — should be the best-tested service in the system)
-- [ ] Dockerize + write its first Helm chart (template for the other 6)
+- [x] Design `finance_db` schema (`Finance_Rates` table, state-wise seeded data for at least 5 major states)
+- [x] Implement EMI calculation endpoint (FR-FIN-01, UC-FS-01)
+- [x] Implement Stamp Duty + Registration Cost endpoints, reading from `Finance_Rates` (FR-FIN-02, UC-FS-02)
+- [x] Implement GST endpoint with construction-status logic (FR-FIN-03)
+- [x] Implement Maintenance Estimator endpoint (FR-FIN-04)
+- [x] Implement Rent Affordability endpoint (FR-FIN-05)
+- [x] Implement Admin-only rate update endpoint (FR-FIN-06, UC-FS-03)
+- [x] Unit tests for every calculator against known correct outputs (this is pure-function logic — should be the best-tested service in the system)
+- [x] Dockerize + write its first Helm chart (template for the other 6)
 
 **Milestone:** All 5 calculators return correct values via Postman; this service's Helm chart becomes the copy-paste starting point for every other service's chart.
 
