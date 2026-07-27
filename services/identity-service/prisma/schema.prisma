@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  BUILDER
+  BROKER
+  BUYER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  phone              String?            @unique
+  passwordHash       String?
+  name               String
+  role               Role               @default(BUYER)
+  isEmailVerified    Boolean            @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  googleId           String?            @unique
+  avatarUrl          String?
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  verificationDocs OTPVerification[]  @relation("UserOTP")
+  refreshTokens    RefreshToken[]
+  userDocs         VerificationDocument[]
+
+  @@map("users")
+}
+
+enum OTPType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model OTPVerification {
+  id        String   @id @default(uuid())
+  email     String
+  otpHash   String
+  type      OTPType  @default(EMAIL_VERIFICATION)
+  userId    String
+  user      User     @relation("UserOTP", fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("otp_verifications")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model VerificationDocument {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  docType    String
+  fileUrl    String
+  uploadedAt DateTime @default(now())
+
+  @@map("verification_documents")
+}

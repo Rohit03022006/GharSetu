@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "OTPType" AS ENUM ('EMAIL_VERIFICATION', 'PASSWORD_RESET');
+
+-- AlterTable
+ALTER TABLE "otp_verifications" ADD COLUMN     "type" "OTPType" NOT NULL DEFAULT 'EMAIL_VERIFICATION';
