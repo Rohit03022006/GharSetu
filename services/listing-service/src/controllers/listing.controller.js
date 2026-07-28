@@ -1,8 +1,19 @@
 import { prisma } from '../lib/prisma.js';
 import * as validator from '../validators/listing.validators.js';
 import * as propertyService from '../services/property.service.js';
+import { checkDuplicateListing } from '../services/duplicateDetection.service.js';
 import * as redisCache from '../lib/redis.js';
 import { logger } from '../utils/logger.js';
+
+export const checkDuplicateListings = async (req, res, next) => {
+  try {
+    const { address, price, areaSqFt, latitude, longitude } = req.body;
+    const duplicates = await checkDuplicateListing(address, price, Number(areaSqFt), latitude, longitude);
+    res.json({ success: true, duplicates });
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * Create Draft Property (FR-PROP-01)
@@ -213,8 +224,10 @@ export const uploadPropertyImage = async (req, res, next) => {
 export const searchProperties = async (req, res, next) => {
   try {
     const {
-      city, minPrice, maxPrice, bedrooms, propertyType, listingType, constructionStatus, page = 1, limit = 20
+      city, minPrice, maxPrice, bedrooms, propertyType, listingType, constructionStatus, query, q, title, page = 1, limit = 20
     } = req.query;
+
+    const searchTerm = query || q || title || '';
 
     const cacheKey = JSON.stringify(req.query);
     const cachedResults = await redisCache.getCachedSearchResult(cacheKey);
@@ -224,7 +237,13 @@ export const searchProperties = async (req, res, next) => {
     }
 
     const where = {
-      status: 'APPROVED',
+      ...(searchTerm ? {
+        OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { city: { contains: searchTerm, mode: 'insensitive' } },
+          { address: { contains: searchTerm, mode: 'insensitive' } }
+        ]
+      } : {}),
       ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
       ...(bedrooms ? { bedrooms: parseInt(bedrooms) } : {}),
       ...(propertyType ? { propertyType } : {}),

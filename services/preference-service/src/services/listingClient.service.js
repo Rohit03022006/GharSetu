@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getCachedProperty, cacheProperty } from '../lib/redis.js';
 import { logger } from '../utils/logger.js';
 
-const LISTING_SERVICE_URL = process.env.LISTING_SERVICE_URL || 'http://localhost:4002';
+const LISTING_SERVICE_URL = process.env.LISTING_SERVICE_URL;
 
 export const getPropertyDetails = async (propertyId) => {
   // 1. Try Redis cache first (2-min TTL per spec)

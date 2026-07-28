@@ -44,7 +44,7 @@ export const processAndUploadImage = async (fileBuffer, originalName) => {
 import { safeHttpRequest } from '../lib/circuitBreaker.js';
 
 export const checkOwnerVerificationStatus = async (ownerId) => {
-  const identityUrl = process.env.IDENTITY_SERVICE_URL || 'http://localhost:4001';
+  const identityUrl = process.env.IDENTITY_SERVICE_URL;
   const result = await safeHttpRequest({
     method: 'GET',
     url: `${identityUrl}/auth/internal/user-status/${ownerId}`

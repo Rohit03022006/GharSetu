@@ -4,7 +4,7 @@ import { logger } from './src/utils/logger.js';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 4003;
+const PORT = process.env.PORT || 4004;
 
 const server = app.listen(PORT, () => {
   logger.info(`Preference Service running on port ${PORT}`);

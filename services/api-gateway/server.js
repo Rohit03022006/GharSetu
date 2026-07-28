@@ -25,34 +25,64 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Microservice Route Proxies
-const IDENTITY_URL = process.env.IDENTITY_SERVICE_URL || 'http://localhost:4001';
-const LISTING_URL = process.env.LISTING_SERVICE_URL || 'http://localhost:4002';
-const PREFERENCE_URL = process.env.PREFERENCE_SERVICE_URL || 'http://localhost:4003';
-const DISCOVERY_URL = process.env.DISCOVERY_SERVICE_URL || 'http://localhost:4004';
-const ENGAGEMENT_URL = process.env.ENGAGEMENT_SERVICE_URL || 'http://localhost:4005';
-const ANALYTICS_URL = process.env.ANALYTICS_SERVICE_URL || 'http://localhost:4006';
+// Microservice Target Ports (Strict Alignment)
+const IDENTITY_URL = process.env.IDENTITY_SERVICE_URL;
+const FINANCE_URL = process.env.FINANCE_SERVICE_URL;
+const LISTING_URL = process.env.LISTING_SERVICE_URL;
+const PREFERENCE_URL = process.env.PREFERENCE_SERVICE_URL ;
+const DISCOVERY_URL = process.env.DISCOVERY_SERVICE_URL;
+const ENGAGEMENT_URL = process.env.ENGAGEMENT_SERVICE_URL;
+const ANALYTICS_URL = process.env.ANALYTICS_SERVICE_URL;
 
-// 1. Identity Service Route
-app.use('/auth', authRateLimiter, createServiceProxy(IDENTITY_URL));
+// 1. Identity Service Route (Port 4001)
+app.use('/auth', authRateLimiter, createServiceProxy(IDENTITY_URL, {
+  proxyReqPathResolver: (req) => '/auth' + req.url
+}));
 
-// 2. Listing Service Route
-app.use('/properties', createServiceProxy(LISTING_URL));
+// 2. Finance Service Route (Port 4002)
+app.use('/finance', createServiceProxy(FINANCE_URL, {
+  proxyReqPathResolver: (req) => '/finance' + req.url
+}));
 
-// 3. Preference Service Route
+// 3. Listing Service Routes (Port 4003)
+app.use('/properties', createServiceProxy(LISTING_URL, {
+  proxyReqPathResolver: (req) => '/properties' + req.url
+}));
+app.use('/search', createServiceProxy(LISTING_URL, {
+  proxyReqPathResolver: (req) => '/search' + req.url
+}));
+app.use('/internal', createServiceProxy(LISTING_URL, {
+  proxyReqPathResolver: (req) => '/internal' + req.url
+}));
+app.use('/share', createServiceProxy(LISTING_URL, {
+  proxyReqPathResolver: (req) => '/share' + req.url
+}));
+
+// 4. Preference Service Route (Port 4004)
 app.use('/preferences', createServiceProxy(PREFERENCE_URL));
+app.use('/wishlist', createServiceProxy(PREFERENCE_URL, {
+  proxyReqPathResolver: (req) => '/wishlist' + req.url
+}));
 
-// 4. Discovery & Search Service Route
+// 5. Discovery & Search Service Route (Port 4005)
 app.use('/discovery', createServiceProxy(DISCOVERY_URL));
 
-// 5. Engagement Service Route (Bookings, Leads, Notifications)
-app.use('/availability', createServiceProxy(ENGAGEMENT_URL));
+// 6. Engagement Service Route (Port 4006)
+app.use('/availability', createServiceProxy(ENGAGEMENT_URL, {
+  proxyReqPathResolver: (req) => '/availability' + req.url
+}));
 app.use('/bookings', createServiceProxy(ENGAGEMENT_URL));
-app.use('/leads', createServiceProxy(ENGAGEMENT_URL));
-app.use('/notifications', createServiceProxy(ENGAGEMENT_URL));
+app.use('/leads', createServiceProxy(ENGAGEMENT_URL, {
+  proxyReqPathResolver: (req) => '/leads' + req.url
+}));
+app.use('/notifications', createServiceProxy(ENGAGEMENT_URL, {
+  proxyReqPathResolver: (req) => '/notifications' + req.url
+}));
 
-// 6. Analytics Service Route (Builder & Admin Dashboards)
-app.use('/analytics', createServiceProxy(ANALYTICS_URL));
+// 7. Analytics Service Route (Port 4007)
+app.use('/analytics', createServiceProxy(ANALYTICS_URL, {
+  proxyReqPathResolver: (req) => '/analytics' + req.url
+}));
 
 // 404 Handler for unmatched routes
 app.use((req, res) => {
@@ -68,7 +98,7 @@ const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
   logger.info(`GharSetu API Gateway running on port ${PORT}`);
-  logger.info(`Proxying requests to Identity (${IDENTITY_URL}), Listing (${LISTING_URL}), Preference (${PREFERENCE_URL}), Discovery (${DISCOVERY_URL}), Engagement (${ENGAGEMENT_URL}), Analytics (${ANALYTICS_URL})`);
+  logger.info(`Proxying Identity (4001), Finance (4002), Listing (4003), Preference (4004), Discovery (4005), Engagement (4006), Analytics (4007)`);
 });
 
 export default app;

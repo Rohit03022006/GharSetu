@@ -6,7 +6,7 @@ import { logger } from '../utils/logger.js';
  */
 export const getUserEmail = async (userId) => {
   try {
-    const identityUrl = process.env.IDENTITY_SERVICE_URL || 'http://localhost:4001';
+    const identityUrl = process.env.IDENTITY_SERVICE_URL;
     const response = await axios.get(`${identityUrl}/auth/internal/user-status/${userId}`, {
       timeout: 3000
     });

@@ -160,3 +160,13 @@ export const getNotifications = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getMyBookings = async (req, res, next) => {
+  try {
+    const buyerId = req.user.userId || req.user.id;
+    const bookings = await engagementService.getBookingsForBuyer(buyerId);
+    res.json({ success: true, count: bookings.length, data: bookings });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import propertyRoutes from './src/routes/property.routes.js';
+import listingRoutes from './src/routes/listing.routes.js';
 import searchRoutes from './src/routes/search.routes.js';
 import reviewRoutes from './src/routes/review.routes.js';
 import internalRoutes from './src/routes/internal.routes.js';
@@ -22,7 +22,7 @@ app.use(morgan(morganFormat, {
 }));
 
 // Dedicated Modular Routes
-app.use('/properties', propertyRoutes);
+app.use('/properties', listingRoutes);
 app.use('/search', searchRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/internal', internalRoutes);

@@ -389,3 +389,10 @@ export const getUserNotifications = async (userId) => {
     orderBy: { createdAt: 'desc' }
   });
 };
+
+export const getBookingsForBuyer = async (buyerId) => {
+  return await prisma.booking.findMany({
+    where: { buyerId },
+    orderBy: { createdAt: 'desc' }
+  });
+};

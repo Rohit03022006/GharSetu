@@ -1,7 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { logger } from '../utils/logger.js';
 
-const minioEndpoint = process.env.MINIO_ENDPOINT || 'localhost';
+const minioEndpoint = process.env.MINIO_ENDPOINT;
 const minioPort = process.env.MINIO_PORT || 9000;
 const useSSL = process.env.MINIO_USE_SSL === 'true';
 
@@ -11,8 +11,8 @@ export const s3Client = new S3Client({
   endpoint: endpointUrl,
   region: 'us-east-1', // MinIO requires a region string
   credentials: {
-    accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-    secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin'
+    accessKeyId: process.env.MINIO_ACCESS_KEY,
+    secretAccessKey: process.env.MINIO_SECRET_KEY
   },
   forcePathStyle: true // Mandatory for MinIO local buckets
 });

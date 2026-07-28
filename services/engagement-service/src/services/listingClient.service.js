@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { logger } from '../utils/logger.js';
 
-const LISTING_SERVICE_URL = process.env.LISTING_SERVICE_URL || 'http://localhost:4002';
+const LISTING_SERVICE_URL = process.env.LISTING_SERVICE_URL;
 
 export const getPropertyOwner = async (propertyId) => {
   try {

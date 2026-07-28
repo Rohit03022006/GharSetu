@@ -9,7 +9,7 @@ const router = Router();
 router.get('/search', listingController.searchProperties);
 router.get('/internal/:id', listingController.getInternalPropertyById);
 
-// Protected Builder / Broker / Admin Listing Management
+router.post('/check-duplicates', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.checkDuplicateListings);
 router.post('/draft', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.createDraft);
 router.put('/:id/autosave', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.autosaveDraft);
 router.post('/:id/submit', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.submitForReview);

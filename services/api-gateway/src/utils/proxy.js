@@ -4,7 +4,7 @@ import { logger } from '../utils/logger.js';
 /**
  * Configure reverse proxy route for a microservice
  */
-export const createServiceProxy = (targetUrl) => {
+export const createServiceProxy = (targetUrl, customOptions = {}) => {
   return proxy(targetUrl, {
     proxyErrorHandler: (err, res, next) => {
       logger.error(`[API Gateway Error] Failed to route request to ${targetUrl}:`, err.message);
@@ -21,6 +21,7 @@ export const createServiceProxy = (targetUrl) => {
         proxyReqOpts.headers['authorization'] = srcReq.headers.authorization;
       }
       return proxyReqOpts;
-    }
+    },
+    ...customOptions
   });
 };

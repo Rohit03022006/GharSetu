@@ -186,6 +186,14 @@ export const logout = async (req, res) => {
 export const googleCallbackHandler = async (req, res) => {
   try {
     const user = req.user;
+    let mode = 'login';
+    if (req.query.state) {
+      try {
+        const parsed = JSON.parse(req.query.state);
+        if (parsed.mode) mode = parsed.mode;
+      } catch (e) {}
+    }
+
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
@@ -197,19 +205,43 @@ export const googleCallbackHandler = async (req, res) => {
       }
     });
 
-    return res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isEmailVerified: user.isEmailVerified,
-        verificationStatus: user.verificationStatus,
-      },
-      accessToken,
-      refreshToken
-    });
+    // Only send OTP if user explicitly clicked Register (mode === 'register') and email is not verified yet
+    let isRegisterFlow = mode === 'register' && !user.isEmailVerified;
+    if (isRegisterFlow) {
+      const otp = generateOTP();
+      const otpHash = await hashOTP(otp);
+      
+      await prisma.oTPVerification.deleteMany({ where: { email: user.email } });
+      await prisma.oTPVerification.create({
+        data: {
+          email: user.email,
+          otpHash,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+        }
+      });
+
+      await sendOTPEmail(user.email, otp);
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = new URL(`${frontendUrl}/auth/callback`);
+    redirectUrl.searchParams.set('mode', mode);
+    redirectUrl.searchParams.set('accessToken', accessToken);
+    redirectUrl.searchParams.set('refreshToken', refreshToken);
+    redirectUrl.searchParams.set('user', JSON.stringify({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone || '',
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      verificationStatus: user.verificationStatus
+    }));
+
+    return res.redirect(redirectUrl.toString());
   } catch (error) {
+    console.error('OAuth Callback error:', error);
     return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'OAuth Callback failed.' } });
   }
 };

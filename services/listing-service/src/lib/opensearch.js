@@ -1,7 +1,7 @@
 import { Client } from '@opensearch-project/opensearch';
 import { logger } from '../utils/logger.js';
 
-const nodeUrl = process.env.OPENSEARCH_NODE || 'http://localhost:9200';
+const nodeUrl = process.env.OPENSEARCH_NODE;
 
 export const openSearchClient = new Client({
   node: nodeUrl

@@ -16,7 +16,14 @@ router.post('/refresh', refresh);
 router.post('/logout', authenticate, logout);
 
 // Google OAuth Routes
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', (req, res, next) => {
+  const mode = req.query.mode || 'login';
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: JSON.stringify({ mode })
+  })(req, res, next);
+});
+
 router.get('/google/callback', passport.authenticate('google', { session: false }), googleCallbackHandler);
 
 export default router;

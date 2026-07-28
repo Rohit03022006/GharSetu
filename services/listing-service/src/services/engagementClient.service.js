@@ -1,7 +1,7 @@
 import { safeHttpRequest } from '../lib/circuitBreaker.js';
 
 export const verifyBookingCompleted = async (propertyId, buyerId) => {
-  const engagementUrl = process.env.ENGAGEMENT_SERVICE_URL || 'http://localhost:4005';
+  const engagementUrl = process.env.ENGAGEMENT_SERVICE_URL;
   const result = await safeHttpRequest({
     method: 'GET',
     url: `${engagementUrl}/internal/bookings/verify-completed`,

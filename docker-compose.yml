@@ -1,0 +1,182 @@
+version: '3.8'
+
+services:
+  # --- Infrastructure Services ---
+  postgres:
+    image: postgres:16
+    container_name: gharsetu-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 8989
+      POSTGRES_DB: gharsetu
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: gharsetu-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Microservices using env_file ---
+  identity-service:
+    build:
+      context: ./services/identity-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-identity-service
+    ports:
+      - "4001:4001"
+    env_file:
+      - ./services/identity-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/identity_db?schema=public"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  finance-service:
+    build:
+      context: ./services/finance-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-finance-service
+    ports:
+      - "4002:4002"
+    env_file:
+      - ./services/finance-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/finance_db?schema=public"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  listing-service:
+    build:
+      context: ./services/listing-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-listing-service
+    ports:
+      - "4003:4003"
+    env_file:
+      - ./services/listing-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/listing_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  preference-service:
+    build:
+      context: ./services/preference-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-preference-service
+    ports:
+      - "4004:4004"
+    env_file:
+      - ./services/preference-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/preference_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  discovery-history-service:
+    build:
+      context: ./services/discovery-history-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-discovery-service
+    ports:
+      - "4005:4005"
+    env_file:
+      - ./services/discovery-history-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/discovery_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  engagement-service:
+    build:
+      context: ./services/engagement-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-engagement-service
+    ports:
+      - "4006:4006"
+    env_file:
+      - ./services/engagement-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/engagement_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  analytics-service:
+    build:
+      context: ./services/analytics-service
+      dockerfile: Dockerfile
+    container_name: gharsetu-analytics-service
+    ports:
+      - "4007:4007"
+    env_file:
+      - ./services/analytics-service/.env
+    environment:
+      DATABASE_URL: "postgresql://postgres:8989@postgres:5432/analytics_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # --- API Gateway ---
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: gharsetu-api-gateway
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./services/api-gateway/.env
+    environment:
+      IDENTITY_SERVICE_URL: "http://identity-service:4001"
+      FINANCE_SERVICE_URL: "http://finance-service:4002"
+      LISTING_SERVICE_URL: "http://listing-service:4003"
+      PREFERENCE_SERVICE_URL: "http://preference-service:4004"
+      DISCOVERY_SERVICE_URL: "http://discovery-history-service:4005"
+      ENGAGEMENT_SERVICE_URL: "http://engagement-service:4006"
+      ANALYTICS_SERVICE_URL: "http://analytics-service:4007"
+    depends_on:
+      - identity-service
+      - finance-service
+      - listing-service
+      - preference-service
+      - discovery-history-service
+      - engagement-service
+      - analytics-service
+
+volumes:
+  postgres_data:

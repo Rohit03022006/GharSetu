@@ -8,7 +8,8 @@ import {
   getLeads,
   updateLeadStage,
   verifyCompletedBookingInternal,
-  getNotifications
+  getNotifications,
+  getMyBookings
 } from '../controllers/engagement.controller.js';
 import { authenticateJwt, requireRole } from '../middleware/auth.middleware.js';
 
@@ -22,6 +23,7 @@ router.post('/availability', authenticateJwt, requireRole(['SELLER', 'BROKER', '
 router.get('/availability/:propertyId', getAvailability);
 
 // Booking Lifecycle Endpoints (FR-BOOK-02, FR-BOOK-03, FR-BOOK-04, UC-ES-02, UC-ES-03)
+router.get('/bookings/my-bookings', authenticateJwt, getMyBookings);
 router.post('/bookings', authenticateJwt, createBooking);
 router.post('/bookings/:bookingId/cancel', authenticateJwt, cancelBooking);
 router.post('/bookings/:bookingId/reschedule', authenticateJwt, rescheduleBooking);
