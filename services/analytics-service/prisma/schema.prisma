@@ -1,0 +1,35 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Daily Aggregated Metrics for Properties (Builder/Seller Dashboard - FR-ANLY-02)
+model PropertyDailyMetric {
+  id               String   @id @default(uuid())
+  propertyId       String
+  ownerId          String
+  date             String   // Format: YYYY-MM-DD
+  viewsCount       Int      @default(0)
+  leadsCount       Int      @default(0)
+  bookingsCount    Int      @default(0)
+  completionsCount Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([propertyId, date])
+  @@index([ownerId, date])
+  @@map("property_daily_metrics")
+}
+
+// Idempotent Event Log (Prevents double counting from Pub/Sub - FR-ANLY-01)
+model ProcessedEvent {
+  eventId    String   @id // Unique event ID or hash
+  eventType  String
+  processedAt DateTime @default(now())
+
+  @@map("processed_events")
+}

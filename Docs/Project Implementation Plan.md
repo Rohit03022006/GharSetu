@@ -465,13 +465,14 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 
 **Goal:** Last, by design — it has nothing to consume until the other services are emitting real events.
 
-- [ ] Design `analytics_db` schema (pre-aggregated tables, not raw event mirrors)
-- [ ] Implement Redis Pub/Sub subscriber consuming events from Listing + Engagement Services (FR-ANLY-01)
-- [ ] Implement scheduled aggregation job (cron), built idempotent from day one (UC-AS-02 — do not skip this, it's flagged as a hard requirement in the FRD)
-- [ ] Implement Builder-facing chart endpoints: Views/Leads/Conversion-funnel/Revenue (FR-ANLY-02, UC-AS-01)
-- [ ] Implement Admin platform-wide dashboard endpoint (FR-ANLY-03, UC-AS-03)
-- [ ] Write a test that re-runs the aggregation job twice on the same event batch and asserts no double-counting (directly testing the idempotency requirement)
+- [x] Design `analytics_db` schema (pre-aggregated tables, not raw event mirrors)
+- [x] Implement Redis Pub/Sub subscriber consuming events from Listing + Engagement Services (FR-ANLY-01)
+- [x] Implement scheduled aggregation job (cron), built idempotent from day one (UC-AS-02 — do not skip this, it's flagged as a hard requirement in the FRD)
+- [x] Implement Builder-facing chart endpoints: Views/Leads/Conversion-funnel/Revenue (FR-ANLY-02, UC-AS-01)
+- [x] Implement Admin platform-wide dashboard endpoint (FR-ANLY-03, UC-AS-03)
+- [x] Write a test that re-runs the aggregation job twice on the same event batch and asserts no double-counting (directly testing the idempotency requirement)
 - [ ] Dockerize + Helm chart
+
 
 **Milestone:** A Builder can see real view/lead/booking numbers reflecting actual activity generated in Phases 3-5; an Admin can see platform-wide numbers.
 
