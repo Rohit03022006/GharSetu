@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  NEGOTIATING
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model AvailabilityCalendar {
+  id         String   @id @default(uuid())
+  ownerId    String   @map("owner_id")
+  propertyId String   @map("property_id")
+  date       String   // Format: YYYY-MM-DD
+  timeSlot   String   @map("time_slot") // e.g. "10:00-11:00"
+  isBooked   Boolean  @default(false) @map("is_booked")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  bookings Booking[]
+
+  @@unique([propertyId, date, timeSlot])
+  @@index([ownerId])
+  @@map("availability_calendars")
+}
+
+model Booking {
+  id             String               @id @default(uuid())
+  propertyId     String               @map("property_id")
+  buyerId        String               @map("buyer_id")
+  ownerId        String               @map("owner_id")
+  availabilityId String               @map("availability_id")
+  status         BookingStatus        @default(SCHEDULED)
+  scheduledDate  String               @map("scheduled_date")
+  timeSlot       String               @map("time_slot")
+  notes          String?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  availability   AvailabilityCalendar @relation(fields: [availabilityId], references: [id])
+  lead           Lead?
+
+  @@index([buyerId])
+  @@index([ownerId])
+  @@index([propertyId])
+  @@map("bookings")
+}
+
+model Lead {
+  id          String             @id @default(uuid())
+  propertyId  String             @map("property_id")
+  buyerId     String             @map("buyer_id")
+  ownerId     String             @map("owner_id")
+  bookingId   String?            @unique @map("booking_id")
+  currentStage LeadStage         @default(NEW) @map("current_stage")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  booking     Booking?           @relation(fields: [bookingId], references: [id])
+  history     LeadStageHistory[]
+
+  @@unique([propertyId, buyerId])
+  @@index([ownerId])
+  @@map("leads")
+}
+
+model LeadStageHistory {
+  id        String    @id @default(uuid())
+  leadId    String    @map("lead_id")
+  fromStage LeadStage @map("from_stage")
+  toStage   LeadStage @map("to_stage")
+  changedBy String    @map("changed_by")
+  notes     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_stage_histories")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("notifications")
+}

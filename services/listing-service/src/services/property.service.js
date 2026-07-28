@@ -41,15 +41,15 @@ export const processAndUploadImage = async (fileBuffer, originalName) => {
   return result;
 };
 
+import { safeHttpRequest } from '../lib/circuitBreaker.js';
+
 export const checkOwnerVerificationStatus = async (ownerId) => {
-  try {
-    const identityUrl = process.env.IDENTITY_SERVICE_URL || 'http://localhost:4001';
-    const response = await axios.get(`${identityUrl}/auth/internal/user-status/${ownerId}`, {
-      timeout: 3000
-    });
-    return response.data?.verificationStatus === 'VERIFIED';
-  } catch (error) {
-    logger.warn(`Could not verify owner status via Identity Service for owner ${ownerId}, proceeding...`);
-    return true;
-  }
+  const identityUrl = process.env.IDENTITY_SERVICE_URL || 'http://localhost:4001';
+  const result = await safeHttpRequest({
+    method: 'GET',
+    url: `${identityUrl}/auth/internal/user-status/${ownerId}`
+  }, 3000, null);
+
+  return result?.verificationStatus === 'VERIFIED';
 };
+

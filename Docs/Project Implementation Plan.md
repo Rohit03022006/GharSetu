@@ -435,24 +435,26 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 **Goal:** The most transactionally sensitive service in the system — scheduled after the pattern is well-proven elsewhere, given its complexity.
 
 ### Week 9 — Availability & Booking Core
-- [ ] Design `engagement_db` schema (Leads, Lead_Stage_History, Bookings, Availability_Calendar, Notifications)
-- [ ] Implement Availability Calendar CRUD for Broker/Builder (FR-BOOK-01, UC-ES-01)
-- [ ] Implement booking creation with the critical atomic transaction: create booking + lock slot + create/update lead, all in one DB transaction (FR-BOOK-02, FR-LEAD-01, UC-ES-02)
-- [ ] Write a specific test for the race-condition case: two simultaneous booking requests for the same slot (must reject one cleanly, per UC-ES-02 alternate flow)
+- [x] Design `engagement_db` schema (Leads, Lead_Stage_History, Bookings, Availability_Calendar, Notifications)
+- [x] Implement Availability Calendar CRUD for Broker/Builder (FR-BOOK-01, UC-ES-01)
+- [x] Implement booking creation with the critical atomic transaction: create booking + lock slot + create/update lead, all in one DB transaction (FR-BOOK-02, FR-LEAD-01, UC-ES-02)
+- [x] Write a specific test for the race-condition case: two simultaneous booking requests for the same slot (must reject one cleanly, per UC-ES-02 alternate flow)
 
 ### Week 10 — Cancel/Reschedule, Leads
-- [ ] Implement cancel booking endpoint (FR-BOOK-03)
-- [ ] Implement reschedule endpoint with atomic slot-release + new-booking-create (FR-BOOK-04, UC-ES-03) — write the specific test for "reschedule target slot also unavailable" edge case
-- [ ] Implement Lead stage-machine transitions with sequential-only enforcement (FR-LEAD-02, FR-LEAD-03, UC-ES-04)
-- [ ] Implement `Lead_Stage_History` append-only logging (FR-LEAD-04)
-- [ ] Replace the temporary Listing-Service stub from Phase 3 with the real `/internal/bookings/verify-completed` endpoint (FR-REV-01 dependency, closes the loop from Week 7)
+- [x] Implement cancel booking endpoint (FR-BOOK-03)
+- [x] Implement reschedule endpoint with atomic slot-release + new-booking-create (FR-BOOK-04, UC-ES-03) — write the specific test for "reschedule target slot also unavailable" edge case
+- [x] Implement Lead stage-machine transitions with sequential-only enforcement (FR-LEAD-02, FR-LEAD-03, UC-ES-04)
+- [x] Implement `Lead_Stage_History` append-only logging (FR-LEAD-04)
+- [x] Replace the temporary Listing-Service stub from Phase 3 with the real `/internal/bookings/verify-completed` endpoint (FR-REV-01 dependency, closes the loop from Week 7)
 
 ### Week 11 — Notifications
-- [ ] Set up self-hosted SMTP via Nodemailer (or free-tier SMTP relay) (FR-NOTIF-02)
-- [ ] Set up OSS/free-tier SMS gateway integration (FR-NOTIF-03)
-- [ ] Implement in-app Notifications table + endpoint as the guaranteed channel (FR-NOTIF-01)
-- [ ] Wire all three channels to fire on booking create/cancel/reschedule — confirm failures in email/SMS never block the core action (FR-NOTIF-04)
-- [ ] Publish `booking.created`, `booking.completed`, `lead.stage_changed` events to Redis Pub/Sub (for Analytics Service, Phase 6)
+- [x] Set up self-hosted SMTP via Nodemailer (or free-tier SMTP relay) (FR-NOTIF-02)
+- [x] Set up OSS/free-tier SMS gateway integration (FR-NOTIF-03)
+- [x] Implement in-app Notifications table + endpoint as the guaranteed channel (FR-NOTIF-01)
+- [x] Wire all three channels to fire on booking create/cancel/reschedule — confirm failures in email/SMS never block the core action (FR-NOTIF-04)
+
+- [x] Publish `booking.created`, `booking.completed`, `lead.stage_changed` events to Redis Pub/Sub (for Analytics Service, Phase 6)
+
 - [ ] Dockerize + Helm chart
 
 **Milestone:** A buyer can book, get cancelled/rescheduled correctly under concurrent load, a lead auto-updates, and the buyer can now leave a review on Listing Service because the real verification endpoint is live.
