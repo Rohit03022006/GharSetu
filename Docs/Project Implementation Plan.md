@@ -420,10 +420,10 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 - [x] Preference Service: `preference_db` schema (Wishlist, Compare_History)
 - [x] Preference Service: Add/remove wishlist endpoints (FR-WISH-01, UC-PS-01)
 - [x] Preference Service: Compare endpoint (max 4, resolves via Listing Service `/internal/properties`) (FR-WISH-02, UC-PS-02)
-- [ ] Discovery-History Service: `discovery_db` schema (Recently_Viewed capped-20 log, Search_History)
-- [ ] Discovery-History Service: `/internal/views` logging endpoint (FR-REC-01, FR-REC-02, UC-DH-01)
-- [ ] Discovery-History Service: Similar Properties rule-based matching (FR-REC-03, FR-REC-04, UC-DH-02)
-- [ ] Wire Redis caching (2-min TTL) for both services' property-data lookups against Listing Service
+- [x] Discovery-History Service: `discovery_db` schema (Recently_Viewed capped-20 log, Search_History)
+- [x] Discovery-History Service: `/internal/views` logging endpoint (FR-REC-01, FR-REC-02, UC-DH-01)
+- [x] Discovery-History Service: Similar Properties rule-based matching (FR-REC-03, FR-REC-04, UC-DH-02)
+- [x] Wire Redis caching (2-min TTL) for both services' property-data lookups against Listing Service
 - [ ] Dockerize + Helm charts for both
 
 **Milestone:** A logged-in buyer can wishlist, compare 4 properties, and see "Recently Viewed" populate automatically after browsing.

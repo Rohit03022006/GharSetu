@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PropertyView {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  propertyId String   @map("property_id")
+  viewedAt   DateTime @default(now()) @map("viewed_at")
+
+  @@index([userId, viewedAt(sort: Desc)])
+  @@map("property_views")
+}
+
+model SearchHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  filters   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("search_histories")
+}
