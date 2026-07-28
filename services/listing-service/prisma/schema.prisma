@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum ConstructionStatus {
+  UNDER_CONSTRUCTION
+  READY_TO_MOVE
+}
+
+enum FurnishingStatus {
+  UNFURNISHED
+  SEMI_FURNISHED
+  FULLY_FURNISHED
+}
+
+enum PropertyType {
+  APARTMENT
+  VILLA
+  INDEPENDENT_HOUSE
+  PLOT
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  SOLD
+  RENTED
+  ARCHIVED
+}
+
+enum RejectionReason {
+  SPAM
+  DUPLICATE
+  FAKE
+  INCOMPLETE
+  POLICY_VIOLATION
+  OTHER
+}
+
+model Property {
+  id                 String             @id @default(uuid())
+  title              String
+  description        String?
+  ownerId            String
+  ownerRole          String
+  listingType        ListingType        @default(SALE)
+  propertyType       PropertyType       @default(APARTMENT)
+  constructionStatus ConstructionStatus @default(READY_TO_MOVE)
+  furnishingStatus   FurnishingStatus?  @default(UNFURNISHED)
+  
+  // Pricing & Area
+  price              Float              // Sale price or Monthly Rent
+  securityDeposit    Float?             // Required for Rent
+  leaseDurationMonths Int?             // Required for Rent
+  areaSqFt           Float
+  bedrooms           Int                @default(1)
+  bathrooms          Int                @default(1)
+  parkingSlots       Int                @default(0)
+  
+  // Location
+  address            String
+  city               String
+  state              String
+  pincode            String?
+  latitude           Float?
+  longitude          Float?
+  metroProximity     Boolean            @default(false)
+  
+  // Status & Audit
+  status             PropertyStatus     @default(DRAFT)
+  rejectionReason    RejectionReason?
+  rejectionNote      String?
+  rejectionCount     Int                @default(0)
+  approvedBy         String?
+  approvedAt         DateTime?
+  
+  // Caching / Derived fields
+  avgRating          Float              @default(0.0)
+  totalReviews       Int                @default(0)
+  
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  images             PropertyImage[]
+  amenities          PropertyAmenity[]
+  reviews            Review[]
+
+  @@index([city, status, price])
+  @@index([bedrooms, status])
+  @@index([ownerId])
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid())
+  propertyId String
+  url        String
+  key        String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_images")
+}
+
+model Amenity {
+  id         String            @id @default(uuid())
+  name       String            @unique
+  properties PropertyAmenity[]
+
+  @@map("amenities")
+}
+
+model PropertyAmenity {
+  propertyId String
+  amenityId  String
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity  Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, amenityId])
+  @@map("property_amenities")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  propertyId String
+  buyerId    String
+  buyerName  String
+  bookingId  String   @unique // One review per completed booking
+  rating     Int      // 1-5
+  comment    String
+  
+  // Builder/Broker Reply
+  replyText  String?
+  repliedAt  DateTime?
+
+  // Moderation
+  isHidden   Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}

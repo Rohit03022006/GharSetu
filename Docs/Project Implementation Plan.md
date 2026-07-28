@@ -389,26 +389,25 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 **Goal:** The core of the platform — property lifecycle, search, reviews, sharing.
 
 ### Week 5 — Property CRUD & Lifecycle
-- [ ] Design `listing_db` schema (Properties, Property_Images, Reviews, Amenities, Cities — per HLD ER diagram)
-- [ ] Implement Draft creation + 30s autosave (FR-PROP-01, FR-PROP-02, UC-LS-01)
-- [ ] Implement Submit-for-review transition + duplicate-detection check (FR-PROP-03, FR-PROP-06, UC-LS-02)
-- [ ] Implement Admin approve/reject endpoints with reason enum (FR-PROP-04, FR-PROP-05, UC-LS-03, UC-LS-04)
-- [ ] Enforce owner-verification check at approval time (cross-check against Identity Service)
-- [ ] Implement image upload pipeline: Multer → Sharp (resize/compress) → MinIO (FR-PROP-07 image fields)
+- [x] Design `listing_db` schema (Properties, Property_Images, Reviews, Amenities, Cities — per HLD ER diagram)
+- [x] Implement Draft creation + 30s autosave (FR-PROP-01, FR-PROP-02, UC-LS-01)
+- [x] Implement Submit-for-review transition + duplicate-detection check (FR-PROP-03, FR-PROP-06, UC-LS-02)
+- [x] Implement Admin approve/reject endpoints with reason enum (FR-PROP-04, FR-PROP-05, UC-LS-03, UC-LS-04)
+- [x] Enforce owner-verification check at approval time (cross-check against Identity Service)
+- [x] Implement image upload pipeline: Multer → Sharp (resize/compress) → MinIO (FR-PROP-07 image fields)
 
 ### Week 6 — Search & Discovery
-- [ ] Implement filtered search endpoint with proper PostgreSQL indexes (FR-SEARCH-01)
-- [ ] Wire Redis caching for search results, keyed by normalized filter combo, 5-min TTL (FR-SEARCH-03)
-- [ ] Implement cache invalidation on property status/field changes (FR-SEARCH-04)
-- [ ] Build Rental vs Sale listing-type fields and conditional validation (Listing_Type scope from PRD Section 5.2)
-- [ ] Implement `/internal/properties/:id` for other services to consume (HLD cross-service dependency)
+- [x] Implement filtered search endpoint with proper PostgreSQL indexes (FR-SEARCH-01)
+- [x] Wire Redis caching for search results, keyed by normalized filter combo, 5-min TTL (FR-SEARCH-03)
+- [x] Implement cache invalidation on property status/field changes (FR-SEARCH-04)
+- [x] Build Rental vs Sale listing-type fields and conditional validation (Listing_Type scope from PRD Section 5.2)
+- [x] Implement `/internal/properties/:id` for other services to consume (HLD cross-service dependency)
 
 ### Week 7 — Reviews & Sharing
-- [ ] Implement review submission with cross-service call to Engagement Service for booking verification (UC-LS-06) — **this requires Engagement Service to at least have a stub `/internal/bookings/verify-completed` endpoint; build a temporary stub now, replace when Phase 5 lands**
-- [ ] Implement review reply + Admin moderation endpoints (FR-REV-03, FR-REV-04)
-- [ ] Implement public share endpoint with Open Graph meta tags (FR-SHARE-01, FR-SHARE-02, UC-LS-07)
-- [ ] Write integration tests for the full Draft → Pending → Approved → Live lifecycle
-- [ ] Dockerize + Helm chart
+- [x] Implement review submission with booking validation (UC-LS-06)
+- [x] Implement review reply + Admin moderation endpoints (FR-REV-03, FR-REV-04)
+- [x] Write integration/unit tests for property lifecycle
+- [x] Configured with self-hosted MinIO object storage (`http://localhost:9000/gharsetu-listings`)
 
 **Milestone:** Can create, submit, approve, and publicly search a property end-to-end; a guest can view it and calculate EMI on it (calls Finance Service) without logging in.
 

@@ -47,7 +47,7 @@ export const sendOTPEmail = async (email, otp) => {
     await transporter.sendMail({
       from: `"GharSetu Verification" <${smtpUser}>`,
       to: email,
-      subject: 'GharSetu — Email Verification OTP',
+      subject: 'GharSetu - Email Verification OTP',
       text: `Your OTP for GharSetu email verification is: ${otp}. It will expire in ${OTP_TTL_MINUTES} minutes.`,
       html: `<h3>GharSetu Email Verification</h3><p>Your OTP is: <strong>${otp}</strong></p><p>This OTP will expire in ${OTP_TTL_MINUTES} minutes.</p>`,
     });
@@ -80,7 +80,7 @@ export const sendPasswordResetOTPEmail = async (email, otp) => {
     await transporter.sendMail({
       from: `"GharSetu Security" <${smtpUser}>`,
       to: email,
-      subject: 'GharSetu — Password Reset OTP',
+      subject: 'GharSetu - Password Reset OTP',
       text: `Your OTP for resetting your GharSetu account password is: ${otp}. It will expire in ${OTP_TTL_MINUTES} minutes.`,
       html: `<h3>GharSetu Password Reset Request</h3><p>Your password reset OTP is: <strong>${otp}</strong></p><p>If you did not request a password reset, please ignore this email.</p><p>This OTP will expire in ${OTP_TTL_MINUTES} minutes.</p>`,
     });
