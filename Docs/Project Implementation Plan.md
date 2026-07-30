@@ -313,16 +313,6 @@ real-estate-platform/
     └── setup-local-env.sh                 # one-shot local bootstrap script
 ```
 ---
-
-### Notes on Key Structural Decisions
-
-services/*/src/services/*Client.service.js naming pattern — every file that calls another microservice is named xClient.service.js (e.g., listingClient.service.js inside Preference Service). This makes cross-service dependencies grep-able in one command (grep -r "Client.service.js" services/) — matches the HLD's explicit cross-service dependency table.
-bookingTransaction.service.js is called out in the tree comment as "the most critical file in the repo" deliberately — it's where the FR-BOOK-02 atomic transaction (booking + slot lock + lead update) lives, and it's the single place a bug would cause real data corruption (double-booked slots).
-Test files named after their FRD use case (booking.race-condition.test.js, aggregation.idempotency.test.js) rather than generic booking.test.js — makes it obvious in CI output exactly which documented edge case failed, and ties every test back to the FRD without needing a separate traceability spreadsheet.
-infra/helm/base-chart/ exists because Finance Service (Phase 2, the first fully Dockerized+Helm-charted service per the Implementation Plan) becomes the template every other service's values.yaml is copied from — one chart, many values files, not seven separate charts.
-frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the UI/UX Documentation — anyone can find a screen's code by looking up its S-ID there.
----
-
 ## 2. Phase 0 — Foundation & Environment (Week 1)
 
 **Goal:** Every tool in the OSS stack runs locally before a single feature is written.
@@ -378,7 +368,7 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 - [x] Implement Rent Affordability endpoint (FR-FIN-05)
 - [x] Implement Admin-only rate update endpoint (FR-FIN-06, UC-FS-03)
 - [x] Unit tests for every calculator against known correct outputs (this is pure-function logic — should be the best-tested service in the system)
-- [x] Dockerize + write its first Helm chart (template for the other 6)
+- [x] Dockerize 
 
 **Milestone:** All 5 calculators return correct values via Postman; this service's Helm chart becomes the copy-paste starting point for every other service's chart.
 
@@ -424,7 +414,7 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 - [x] Discovery-History Service: `/internal/views` logging endpoint (FR-REC-01, FR-REC-02, UC-DH-01)
 - [x] Discovery-History Service: Similar Properties rule-based matching (FR-REC-03, FR-REC-04, UC-DH-02)
 - [x] Wire Redis caching (2-min TTL) for both services' property-data lookups against Listing Service
-- [ ] Dockerize + Helm charts for both
+- [x] Dockerize 
 
 **Milestone:** A logged-in buyer can wishlist, compare 4 properties, and see "Recently Viewed" populate automatically after browsing.
 
@@ -455,8 +445,7 @@ frontend/src/pages/ folder names map 1:1 to the Screen List (Section 5) in the U
 
 - [x] Publish `booking.created`, `booking.completed`, `lead.stage_changed` events to Redis Pub/Sub (for Analytics Service, Phase 6)
 
-- [ ] Dockerize + Helm chart
-
+- [x] Dockerize
 **Milestone:** A buyer can book, get cancelled/rescheduled correctly under concurrent load, a lead auto-updates, and the buyer can now leave a review on Listing Service because the real verification endpoint is live.
 
 ---
