@@ -1,13 +1,16 @@
 import { Router } from 'express';
 import * as listingController from '../controllers/listing.controller.js';
 import { authenticateJwt, authorize } from '../middleware/auth.middleware.js';
+import { requireInternalSecret } from '../middleware/internalAuth.middleware.js';
 import { uploadMiddleware } from '../middleware/upload.middleware.js';
 
 const router = Router();
 
-// Public Search & Internal Endpoints
+// Public Search & Endpoints
 router.get('/search', listingController.searchProperties);
-router.get('/internal/:id', listingController.getInternalPropertyById);
+router.get('/moderation/queue', authenticateJwt, authorize('ADMIN'), listingController.getModerationQueue);
+router.get('/internal/:id', requireInternalSecret, listingController.getInternalPropertyById);
+router.get('/:id', listingController.getPropertyById);
 
 router.post('/check-duplicates', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.checkDuplicateListings);
 router.post('/draft', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.createDraft);
@@ -18,6 +21,9 @@ router.post('/:id/images', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMI
 // Admin Listing Moderation
 router.post('/:id/approve', authenticateJwt, authorize('ADMIN'), listingController.approveProperty);
 router.post('/:id/reject', authenticateJwt, authorize('ADMIN'), listingController.rejectProperty);
+
+// Property Lifecycle Status Management (FR-PROP-03)
+router.patch('/:id/status', authenticateJwt, authorize('BUILDER', 'BROKER', 'ADMIN'), listingController.updatePropertyStatus);
 
 // Protected Buyer Reviews
 router.post('/:id/reviews', authenticateJwt, authorize('BUYER'), listingController.submitReview);

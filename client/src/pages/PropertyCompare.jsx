@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCompareProperties } from '../hooks/useApi';
-import { Layers, Plus, AlertTriangle } from 'lucide-react';
+import { Layers, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PropertyCompareSelector } from '@/components/property/PropertyCompareSelector';
@@ -9,7 +9,7 @@ import { PropertyCompareMatrixTable } from '@/components/property/PropertyCompar
 
 export const PropertyCompare = () => {
   const [searchParams] = useSearchParams();
-  const initialP1 = searchParams.get('p1');
+  const initialP1 = searchParams.get('p1') || searchParams.get('ids')?.split(',')[0];
   const initialT1 = searchParams.get('t1');
 
   const [selectedProps, setSelectedProps] = useState([
@@ -51,13 +51,13 @@ export const PropertyCompare = () => {
   };
 
   const handleCompare = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setErrorMessage('');
 
     const validSelected = selectedProps.filter(s => s.id && s.title);
 
     if (validSelected.length < 2) {
-      setErrorMessage('Please select at least 2 properties from the search suggestions dropdown.');
+      setErrorMessage('Please select at least 2 properties from the search suggestions dropdown to compare.');
       return;
     }
 
@@ -65,25 +65,16 @@ export const PropertyCompare = () => {
 
     const uniqueIds = new Set(ids);
     if (uniqueIds.size !== ids.length) {
-      setErrorMessage('Duplicate properties selected! Please choose different properties from the list.');
+      setErrorMessage('Duplicate properties selected. Please choose distinct properties to compare.');
       return;
     }
 
     try {
       const res = await compareMutation.mutateAsync(ids);
-      setComparedData(res.data || []);
+      setComparedData(res?.data || res || []);
     } catch (err) {
-      const fallbackList = validSelected.map((p, index) => {
-        return {
-          id: p.id,
-          title: p.title,
-          price: p.raw?.price || (5000000 + (index + 1) * 1500000),
-          bhk: p.raw?.bhk || (index + 2),
-          area: p.raw?.area || `${1000 + index * 250} sqft`,
-          city: p.raw?.city || (index % 2 === 0 ? 'Noida' : 'Delhi')
-        };
-      });
-      setComparedData(fallbackList);
+      setErrorMessage(err.message || 'Failed to fetch comparison matrix from backend service.');
+      setComparedData([]);
     }
   };
 
@@ -91,14 +82,18 @@ export const PropertyCompare = () => {
     <div className="min-h-screen bg-background py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-heading font-bold">Property Comparison Matrix</h1>
-          <p className="text-sm text-muted-foreground">Type property names with instant OpenSearch suggestions for side-by-side evaluation.</p>
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">
+            Property Comparison Matrix (S-03)
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Side-by-side technical specification, RERA compliance, and financial comparison directly hydrated from the database.
+          </p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 rounded-2xl border-border shadow-xs">
           <form onSubmit={handleCompare} className="space-y-4">
             {errorMessage && (
-              <div className="flex items-center space-x-2 p-3 bg-destructive/15 border border-destructive/30 rounded-md text-destructive text-sm font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex items-center space-x-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs font-semibold">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -120,15 +115,29 @@ export const PropertyCompare = () => {
 
             <div className="flex items-center justify-between pt-2">
               {selectedProps.length < 4 ? (
-                <Button type="button" variant="outline" size="sm" onClick={handleAddInput}>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddInput} className="rounded-xl text-xs">
                   <Plus className="w-4 h-4 mr-1" /> Add Another Property
                 </Button>
               ) : (
                 <span className="text-xs text-muted-foreground">Maximum 4 properties reached</span>
               )}
 
-              <Button type="submit" disabled={compareMutation.isPending}>
-                <Layers className="w-4 h-4 mr-2" /> Compare Properties
+              <Button
+                type="submit"
+                disabled={compareMutation.isPending}
+                className="rounded-xl text-xs font-semibold h-10 px-6 gap-2"
+              >
+                {compareMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Hydrating Comparison...</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-4 h-4" />
+                    <span>Compare Properties</span>
+                  </>
+                )}
               </Button>
             </div>
           </form>

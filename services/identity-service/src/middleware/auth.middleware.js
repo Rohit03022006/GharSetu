@@ -13,9 +13,13 @@ export const authenticate = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = verifyAccessToken(token);
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      id: decoded.userId || decoded.id,
+      userId: decoded.userId || decoded.id
+    };
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid or expired access token.' });
+    return res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid or expired access token.' } });
   }
 };

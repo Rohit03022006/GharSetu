@@ -1,4 +1,10 @@
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
+
+const submitDocSchema = z.object({
+  docType: z.enum(['RERA_CERTIFICATE', 'AADHAAR', 'PAN', 'BUILDER_LICENSE', 'BUSINESS_REGISTRATION', 'OTHER']),
+  fileUrl: z.string().url().max(2000)
+});
 
 export const getPendingVerifications = async (req, res) => {
   try {
@@ -11,7 +17,14 @@ export const getPendingVerifications = async (req, res) => {
         role: true,
         verificationStatus: true,
         createdAt: true,
-        verificationDocs: true,
+        userDocs: {
+          select: {
+            id: true,
+            docType: true,
+            fileUrl: true,
+            uploadedAt: true
+          }
+        },
       }
     });
 
@@ -51,8 +64,8 @@ export const rejectVerification = async (req, res) => {
 
 export const submitVerificationDoc = async (req, res) => {
   try {
-    const { docType, fileUrl } = req.body;
-    const userId = req.user.userId;
+    const { docType, fileUrl } = submitDocSchema.parse(req.body);
+    const userId = req.user.userId || req.user.id;
 
     const doc = await prisma.verificationDocument.create({
       data: {
@@ -69,6 +82,9 @@ export const submitVerificationDoc = async (req, res) => {
 
     return res.status(201).json({ message: 'Document submitted for verification.', doc });
   } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors } });
+    }
     return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Document submission failed.' } });
   }
 };

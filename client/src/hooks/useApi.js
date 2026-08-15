@@ -20,7 +20,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor to handle unauthenticated 401 response
+// Interceptor to handle unauthenticated 401 response and format API error messages
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -30,11 +30,25 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
     }
+    
+    // Normalize custom error payloads
+    const serverError = error.response?.data?.error || error.response?.data?.message || error.message;
+    if (typeof serverError === 'object' && serverError !== null) {
+      error.apiErrorCode = serverError.code;
+      error.apiErrorMessage = serverError.message;
+      error.message = serverError.message || error.message;
+    } else if (typeof serverError === 'string') {
+      error.apiErrorMessage = serverError;
+      error.message = serverError;
+    }
+
     return Promise.reject(error);
   }
 );
 
-// --- IDENTITY & AUTH HOOKS ---
+// ==========================================
+// 1. IDENTITY & AUTHENTICATION HOOKS (S-03, S-10, S-23)
+// ==========================================
 export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials) => apiClient.post('/auth/login', credentials)
@@ -77,17 +91,44 @@ export const useResetPasswordWithOtp = () => {
   });
 };
 
-export const useSubmitVerificationDoc = () => {
+export const useUserProfile = () => {
+  return useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () => apiClient.get('/users/me')
+  });
+};
+
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => apiClient.post('/auth/verification/docs', payload)
+    mutationFn: (payload) => apiClient.patch('/users/me', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+    }
+  });
+};
+
+export const useSubmitVerificationDoc = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => apiClient.post('/verification/documents', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-verifications'] });
+    }
   });
 };
 
 export const useUploadVerificationDocs = () => {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (formData) => apiClient.post('/auth/verification/docs', formData, {
+    mutationFn: (formData) => apiClient.post('/verification/documents', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-verifications'] });
+    }
   });
 };
 
@@ -104,6 +145,7 @@ export const useApproveVerification = () => {
     mutationFn: (userId) => apiClient.post(`/admin/verifications/${userId}/approve`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
   });
 };
@@ -114,11 +156,41 @@ export const useRejectVerification = () => {
     mutationFn: ({ userId, reason }) => apiClient.post(`/admin/verifications/${userId}/reject`, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     }
   });
 };
 
-// --- FINANCE SERVICE HOOKS ---
+export const useAdminUsers = () => {
+  return useQuery({
+    queryKey: ['admin-users'],
+    queryFn: () => apiClient.get('/users/admin')
+  });
+};
+
+export const useUpdateUserRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }) => apiClient.patch(`/users/admin/${userId}/role`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    }
+  });
+};
+
+export const useUpdateUserStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, status }) => apiClient.patch(`/users/admin/${userId}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    }
+  });
+};
+
+// ==========================================
+// 2. FINANCE SERVICE HOOKS (S-07)
+// ==========================================
 export const useCalculateEmi = () => {
   return useMutation({
     mutationFn: (payload) => apiClient.post('/finance/emi', payload)
@@ -166,7 +238,9 @@ export const useUpdateFinanceRate = () => {
   });
 };
 
-// --- PROPERTY / LISTING HOOKS ---
+// ==========================================
+// 3. PROPERTY & LISTING HOOKS (S-01, S-02, S-12, S-13, S-19)
+// ==========================================
 export const useSearchProperties = (filters = {}) => {
   return useQuery({
     queryKey: ['properties', filters],
@@ -186,7 +260,7 @@ export const usePropertyAutocomplete = (query) => {
 export const usePropertyDetails = (propertyId) => {
   return useQuery({
     queryKey: ['property', propertyId],
-    queryFn: () => apiClient.get(`/internal/properties/${propertyId}`),
+    queryFn: () => apiClient.get(`/properties/${propertyId}`),
     enabled: !!propertyId
   });
 };
@@ -200,8 +274,13 @@ export const useShareMetadata = (propertyId) => {
 };
 
 export const useCreateDraft = () => {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (draftData) => apiClient.post('/properties/draft', draftData)
+    mutationFn: (draftData) => apiClient.post('/properties/draft', draftData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['builder-analytics'] });
+    }
   });
 };
 
@@ -218,8 +297,13 @@ export const useAutosaveDraft = () => {
 };
 
 export const useSubmitForReview = () => {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => apiClient.post(`/properties/${id}/submit`)
+    mutationFn: (id) => apiClient.post(`/properties/${id}/submit`),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['property', id] });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+    }
   });
 };
 
@@ -235,12 +319,32 @@ export const useUploadPropertyImage = () => {
   });
 };
 
+export const useUpdatePropertyStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }) => apiClient.patch(`/properties/${id}/status`, { status }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['property', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['builder-analytics'] });
+    }
+  });
+};
+
+export const useAdminListingsQueue = () => {
+  return useQuery({
+    queryKey: ['moderation-queue'],
+    queryFn: () => apiClient.get('/properties/moderation/queue')
+  });
+};
+
 export const useApproveProperty = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => apiClient.post(`/properties/${id}/approve`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
     }
   });
 };
@@ -248,14 +352,32 @@ export const useApproveProperty = () => {
 export const useRejectProperty = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }) => apiClient.post(`/properties/${id}/reject`, { reason }),
+    mutationFn: ({ id, reason, rejectionReason, rejectionNote }) =>
+      apiClient.post(`/properties/${id}/reject`, {
+        rejectionReason: rejectionReason || reason || 'Listing rejected by admin',
+        rejectionNote: rejectionNote || ''
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
     }
   });
 };
 
-// --- PREFERENCE / WISHLIST / COMPARE HOOKS ---
+export const useAdminVerifyUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, status, comments }) =>
+      apiClient.post(`/verification/admin/verify`, { userId, status, comments }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-verification'] });
+    }
+  });
+};
+
+// ==========================================
+// 4. PREFERENCES, WISHLIST & COMPARISON (S-05, S-06)
+// ==========================================
 export const useWishlist = () => {
   return useQuery({
     queryKey: ['wishlist'],
@@ -291,7 +413,7 @@ export const useToggleWishlist = () => {
   return {
     mutateAsync: async (propertyId, notes = '') => {
       const items = wishlistData?.data || wishlistData || [];
-      const existing = Array.isArray(items) && items.find(i => (i.propertyId || i.id) === propertyId);
+      const existing = Array.isArray(items) && items.find(i => (i.propertyId || i.id || i.property?.id) === propertyId);
       if (existing) {
         return removeFromWishlist.mutateAsync(propertyId);
       } else {
@@ -300,7 +422,7 @@ export const useToggleWishlist = () => {
     },
     mutate: (propertyId, notes = '') => {
       const items = wishlistData?.data || wishlistData || [];
-      const existing = Array.isArray(items) && items.find(i => (i.propertyId || i.id) === propertyId);
+      const existing = Array.isArray(items) && items.find(i => (i.propertyId || i.id || i.property?.id) === propertyId);
       if (existing) {
         removeFromWishlist.mutate(propertyId);
       } else {
@@ -316,7 +438,9 @@ export const useCompareProperties = () => {
   });
 };
 
-// --- DISCOVERY & HISTORY HOOKS ---
+// ==========================================
+// 5. DISCOVERY & SEARCH INTELLIGENCE (S-08)
+// ==========================================
 export const useRecentlyViewed = () => {
   return useQuery({
     queryKey: ['recently-viewed'],
@@ -339,7 +463,27 @@ export const useSimilarProperties = (propertyId) => {
   });
 };
 
-// --- ENGAGEMENT / BOOKING / REVIEWS HOOKS ---
+// ==========================================
+// 6. ENGAGEMENT, BOOKINGS & LEADS (S-04, S-14, S-15, S-22)
+// ==========================================
+export const usePropertyAvailability = (propertyId) => {
+  return useQuery({
+    queryKey: ['property-availability', propertyId],
+    queryFn: () => apiClient.get(`/availability/${propertyId}`),
+    enabled: !!propertyId
+  });
+};
+
+export const useCreateAvailability = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (slotData) => apiClient.post('/availability', slotData),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['property-availability', variables.propertyId] });
+    }
+  });
+};
+
 export const useBookings = () => {
   return useQuery({
     queryKey: ['bookings'],
@@ -353,17 +497,92 @@ export const useCreateBooking = () => {
     mutationFn: (bookingData) => apiClient.post('/bookings', bookingData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     }
   });
 };
 
-export const useSubmitReview = () => {
+export const useCancelBooking = () => {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ propertyId, rating, comment }) => apiClient.post(`/properties/${propertyId}/reviews`, { rating, comment })
+    mutationFn: ({ bookingId, reason }) => apiClient.post(`/bookings/${bookingId}/cancel`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    }
   });
 };
 
-// --- ANALYTICS HOOKS ---
+export const useRescheduleBooking = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, newSlotId, newDate }) => apiClient.post(`/bookings/${bookingId}/reschedule`, { newSlotId, newDate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    }
+  });
+};
+
+export const useLeads = () => {
+  return useQuery({
+    queryKey: ['leads'],
+    queryFn: () => apiClient.get('/leads')
+  });
+};
+
+export const useUpdateLeadStage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leadId, stage, notes }) => apiClient.patch(`/leads/${leadId}/stage`, { stage, notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    }
+  });
+};
+
+export const useNotifications = () => {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => apiClient.get('/notifications')
+  });
+};
+
+export const useSubmitReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ propertyId, bookingId, rating, comment }) =>
+      apiClient.post(`/properties/${propertyId}/reviews`, { bookingId, rating, comment }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['property', variables.propertyId] });
+    }
+  });
+};
+
+export const useReplyToReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reviewId, reply, replyText }) =>
+      apiClient.post(`/reviews/${reviewId}/reply`, { replyText: replyText || reply }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['property'] });
+    }
+  });
+};
+
+export const useModerateReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reviewId, status, moderationReason }) =>
+      apiClient.patch(`/reviews/${reviewId}/moderate`, { status, moderationReason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderation-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['property'] });
+    }
+  });
+};
+
+// ==========================================
+// 7. ANALYTICS HOOKS (S-11, S-16, S-17, S-21)
+// ==========================================
 export const useBuilderDashboard = () => {
   return useQuery({
     queryKey: ['builder-analytics'],

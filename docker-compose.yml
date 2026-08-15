@@ -1,7 +1,10 @@
-version: '3.8'
-
 services:
-  # --- Infrastructure Services ---
+  # =================================================================
+  # 1. Infrastructure Services (PostgreSQL, Redis, MinIO)
+  # =================================================================
+
+  # PostgreSQL Multi-Database Container
+  # Host port mapped to 5433 (or POSTGRES_PORT) to prevent conflict with local host Postgres (port 5432)
   postgres:
     image: postgres:16
     container_name: gharsetu-postgres
@@ -9,28 +12,57 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 8989
       POSTGRES_DB: gharsetu
+      POSTGRES_MULTIPLE_DATABASES: "identity_db,finance_db,listing_db,preference_db,discovery_db,engagement_db,analytics_db"
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gharsetu"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # Redis In-Memory Cache & Pub/Sub
+  # Host port mapped to 6380 (or REDIS_PORT) to prevent conflict with local host Redis (port 6379)
   redis:
-    image: redis:7-alpine
+    image: redis:7
     container_name: gharsetu-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # --- Microservices using env_file ---
+  # MinIO S3-Compatible Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: gharsetu-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =================================================================
+  # 2. Microservices Layer
+  # =================================================================
+
+  # Identity Service (Port 4001)
   identity-service:
     build:
       context: ./services/identity-service
@@ -42,10 +74,18 @@ services:
       - ./services/identity-service/.env
     environment:
       DATABASE_URL: "postgresql://postgres:8989@postgres:5432/identity_db?schema=public"
+      MINIO_ENDPOINT: "minio"
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      MINIO_USE_SSL: "false"
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_healthy
 
+  # Finance Service (Port 4002)
   finance-service:
     build:
       context: ./services/finance-service
@@ -61,6 +101,7 @@ services:
       postgres:
         condition: service_healthy
 
+  # Listing Service (Port 4003)
   listing-service:
     build:
       context: ./services/listing-service
@@ -73,12 +114,20 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:8989@postgres:5432/listing_db?schema=public"
       REDIS_URL: "redis://redis:6379"
+      MINIO_ENDPOINT: "minio"
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      MINIO_USE_SSL: "false"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
 
+  # Preference Service (Port 4004)
   preference-service:
     build:
       context: ./services/preference-service
@@ -91,12 +140,14 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:8989@postgres:5432/preference_db?schema=public"
       REDIS_URL: "redis://redis:6379"
+      LISTING_SERVICE_URL: "http://listing-service:4003"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  # Discovery History Service (Port 4005)
   discovery-history-service:
     build:
       context: ./services/discovery-history-service
@@ -109,12 +160,14 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:8989@postgres:5432/discovery_db?schema=public"
       REDIS_URL: "redis://redis:6379"
+      LISTING_SERVICE_URL: "http://listing-service:4003"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  # Engagement Service (Port 4006)
   engagement-service:
     build:
       context: ./services/engagement-service
@@ -127,12 +180,14 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:8989@postgres:5432/engagement_db?schema=public"
       REDIS_URL: "redis://redis:6379"
+      LISTING_SERVICE_URL: "http://listing-service:4003"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  # Analytics Service (Port 4007)
   analytics-service:
     build:
       context: ./services/analytics-service
@@ -145,13 +200,17 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:8989@postgres:5432/analytics_db?schema=public"
       REDIS_URL: "redis://redis:6379"
+      LISTING_SERVICE_URL: "http://listing-service:4003"
+      ENGAGEMENT_SERVICE_URL: "http://engagement-service:4006"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
-  # --- API Gateway ---
+  # =================================================================
+  # 3. API Gateway Layer (Port 4000)
+  # =================================================================
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -178,5 +237,26 @@ services:
       - engagement-service
       - analytics-service
 
+  # =================================================================
+  # 4. Frontend Client SPA (Vite + React + Nginx)
+  # =================================================================
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: gharsetu-client
+    ports:
+      - "${CLIENT_PORT:-5173}:80"
+    depends_on:
+      - api-gateway
+
+# =================================================================
+# Persistent Volumes
+# =================================================================
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local

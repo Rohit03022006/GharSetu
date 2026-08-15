@@ -12,6 +12,9 @@ export const submitReview = async (req, res, next) => {
     if (error.name === 'ZodError') {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0].message } });
     }
+    if (error.code === 'VISIT_NOT_COMPLETED') {
+      return res.status(403).json({ error: { code: 'VISIT_NOT_COMPLETED', message: error.message } });
+    }
     if (error.code === 'P2002') {
       return res.status(400).json({ error: { code: 'DUPLICATE_REVIEW', message: 'You have already reviewed this booking' } });
     }

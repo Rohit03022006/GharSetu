@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.git
+.gitignore
+.env
+.env.*
+.DS_Store
+dist
+build
+coverage
+.vscode
+.idea
+*.md
+Docs
+Real_Estate_Platform_HLD.jpg

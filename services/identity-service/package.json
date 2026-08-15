@@ -7,12 +7,13 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "test": "node --test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@prisma/client": "^6.4.0",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -22,11 +23,11 @@
     "nodemailer": "^6.10.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "prisma": "^6.4.0",
     "winston": "^3.19.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9",
-    "prisma": "^6.4.0"
+    "nodemon": "^3.1.9"
   }
 }

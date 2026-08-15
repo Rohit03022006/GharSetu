@@ -7,6 +7,7 @@ import { configureGoogleOAuth } from './src/services/oauth.service.js';
 import { logger } from './src/utils/logger.js';
 import authRoutes from './src/routes/auth.routes.js';
 import verificationRoutes from './src/routes/verification.routes.js';
+import userRoutes from './src/routes/user.routes.js';
 
 const app = express();
 
@@ -28,6 +29,9 @@ configureGoogleOAuth(prisma);
 // Routes
 app.use('/auth', authRoutes);
 app.use('/admin/verifications', verificationRoutes);
+app.use('/verification', verificationRoutes);
+app.use('/users', userRoutes);
+app.use('/admin/users', userRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

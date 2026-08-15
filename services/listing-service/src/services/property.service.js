@@ -30,14 +30,16 @@ export const checkDuplicateListing = async (address, price, areaSqFt, latitude, 
   };
 };
 
+import crypto from 'crypto';
+
 export const processAndUploadImage = async (fileBuffer, originalName) => {
   const compressedBuffer = await sharp(fileBuffer)
     .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 80 })
     .toBuffer();
 
-  const fileName = `${originalName.replace(/\.[^/.]+$/, '')}.webp`;
-  const result = await uploadToMinIO(compressedBuffer, fileName, 'image/webp');
+  const safeFileName = `${crypto.randomUUID()}.webp`;
+  const result = await uploadToMinIO(compressedBuffer, safeFileName, 'image/webp');
   return result;
 };
 
@@ -45,9 +47,13 @@ import { safeHttpRequest } from '../lib/circuitBreaker.js';
 
 export const checkOwnerVerificationStatus = async (ownerId) => {
   const identityUrl = process.env.IDENTITY_SERVICE_URL;
+  const internalKey = process.env.INTERNAL_SERVICE_KEY || 'gharsetu-internal-microservice-secure-key-2026';
   const result = await safeHttpRequest({
     method: 'GET',
-    url: `${identityUrl}/auth/internal/user-status/${ownerId}`
+    url: `${identityUrl}/auth/internal/user-status/${ownerId}`,
+    headers: {
+      'x-internal-service-key': internalKey
+    }
   }, 3000, null);
 
   return result?.verificationStatus === 'VERIFIED';

@@ -57,36 +57,45 @@ function ChartContainer({
   );
 }
 
+const sanitizeCssValue = (val) => {
+  if (!val || typeof val !== 'string') return '';
+  // Strip out any characters that could break out of CSS string or style tag
+  return val.replace(/[<>"'`;{}]/g, '').trim();
+};
+
 const ChartStyle = ({
   id,
   config
 }) => {
-  const colorConfig = Object.entries(config).filter(([, config]) => config.theme ?? config.color)
+  const colorConfig = Object.entries(config).filter(([, config]) => config.theme ?? config.color);
 
   if (!colorConfig.length) {
-    return null
+    return null;
   }
+
+  const safeId = sanitizeCssValue(id);
 
   return (
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart="${safeId}"] {
 ${colorConfig
 .map(([key, itemConfig]) => {
-const color =
-  itemConfig.theme?.[theme] ??
-  itemConfig.color
-return color ? `  --color-${key}: ${color};` : null
+  const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
+  const rawColor = itemConfig.theme?.[theme] ?? itemConfig.color;
+  const color = sanitizeCssValue(rawColor);
+  return color && safeKey ? `  --color-${safeKey}: ${color};` : null;
 })
+.filter(Boolean)
 .join("\n")}
 }
 `)
           .join("\n"),
       }} />
   );
-}
+};
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 

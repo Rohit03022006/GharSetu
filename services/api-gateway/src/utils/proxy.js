@@ -16,10 +16,21 @@ export const createServiceProxy = (targetUrl, customOptions = {}) => {
       });
     },
     proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
-      // Forward Authorization headers intact
+      // Forward Authorization header intact
       if (srcReq.headers.authorization) {
         proxyReqOpts.headers['authorization'] = srcReq.headers.authorization;
       }
+      if (srcReq.headers['x-user-id']) {
+        proxyReqOpts.headers['x-user-id'] = srcReq.headers['x-user-id'];
+      }
+      if (srcReq.headers['x-user-role']) {
+        proxyReqOpts.headers['x-user-role'] = srcReq.headers['x-user-role'];
+      }
+      if (srcReq.headers['x-user-email']) {
+        proxyReqOpts.headers['x-user-email'] = srcReq.headers['x-user-email'];
+      }
+      // Never allow client-origin x-internal-service-key to pass through proxy
+      delete proxyReqOpts.headers['x-internal-service-key'];
       return proxyReqOpts;
     },
     ...customOptions

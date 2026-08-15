@@ -1,10 +1,21 @@
 import { prisma } from '../lib/prisma.js';
+import { verifyBookingCompleted } from './engagementClient.service.js';
 
 export const createReviewService = async (propertyId, buyer, { bookingId, rating, comment }) => {
+  const buyerId = buyer.userId || buyer.id;
+  const isVerified = await verifyBookingCompleted(propertyId, buyerId);
+
+  if (!isVerified) {
+    const error = new Error('Reviews can only be submitted after a verified property visit');
+    error.status = 403;
+    error.code = 'VISIT_NOT_COMPLETED';
+    throw error;
+  }
+
   const review = await prisma.review.create({
     data: {
       propertyId,
-      buyerId: buyer.id,
+      buyerId,
       buyerName: buyer.name || 'Buyer',
       bookingId,
       rating,

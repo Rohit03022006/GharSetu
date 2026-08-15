@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import passport from 'passport';
-import { register, login, refresh, logout, googleCallbackHandler, verifyEmailOTP, resendEmailOTP, forgotPassword, resetPasswordWithOTP } from '../controllers/auth.controller.js';
+import { register, login, refresh, logout, googleCallbackHandler, verifyEmailOTP, resendEmailOTP, forgotPassword, resetPasswordWithOTP, getUserStatusInternal } from '../controllers/auth.controller.js';
 import { authRateLimiter } from '../middleware/rateLimit.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { requireInternalSecret } from '../middleware/internalAuth.middleware.js';
 
 const router = Router();
+
+// Internal service-to-service lookup endpoint (Guarded with internal secret)
+router.get('/internal/user-status/:userId', requireInternalSecret, getUserStatusInternal);
 
 router.post('/register', authRateLimiter, register);
 router.post('/login', authRateLimiter, login);

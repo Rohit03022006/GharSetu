@@ -75,6 +75,9 @@ test('Race-Condition & Lifecycle Edge-Case Integration Tests', async (t) => {
     await prisma.$disconnect();
   });
 
+  let winningBuyer;
+  let losingBuyer;
+
   await t.test('RACE CONDITION: Two simultaneous booking requests for the same slot must reject one cleanly (UC-ES-02)', async () => {
     const results = await Promise.allSettled([
       createAtomicBooking(testBuyer1, testPropertyId, slot1.id, 'Buyer 1 request'),
@@ -88,18 +91,21 @@ test('Race-Condition & Lifecycle Edge-Case Integration Tests', async (t) => {
     assert.strictEqual(rejected.length, 1, 'Exactly one booking request must fail with slot locked error');
     assert.strictEqual(rejected[0].reason.code, 'SLOT_ALREADY_BOOKED');
     assert.strictEqual(rejected[0].reason.status, 409);
+
+    winningBuyer = fulfilled[0].value.booking.buyerId;
+    losingBuyer = winningBuyer === testBuyer1 ? testBuyer2 : testBuyer1;
   });
 
   await t.test('RESCHEDULE EDGE CASE: Reschedule fails if target slot is already booked (FR-BOOK-04, UC-ES-03)', async () => {
-    // Book slot2 first
-    await createAtomicBooking(testBuyer2, testPropertyId, slot2.id, 'Booking slot 2');
+    // Book slot2 with the other buyer
+    await createAtomicBooking(losingBuyer, testPropertyId, slot2.id, 'Booking slot 2');
 
-    // Fetch buyer 1's booking on slot1
-    const booking1 = await prisma.booking.findFirst({ where: { buyerId: testBuyer1 } });
+    // Fetch winning buyer's booking on slot1
+    const booking1 = await prisma.booking.findFirst({ where: { buyerId: winningBuyer } });
 
-    // Buyer 1 tries to reschedule to slot2 (which is now booked)
+    // Winning buyer tries to reschedule to slot2 (which is now booked)
     try {
-      await rescheduleBooking(booking1.id, testBuyer1, slot2.id, 'Attempting to switch to slot 2');
+      await rescheduleBooking(booking1.id, winningBuyer, slot2.id, 'Attempting to switch to slot 2');
       assert.fail('Should have thrown target slot unavailable error');
     } catch (err) {
       const code = err.code || err.reason?.code || (typeof err === 'object' ? err.code : null);
@@ -108,7 +114,7 @@ test('Race-Condition & Lifecycle Edge-Case Integration Tests', async (t) => {
   });
 
   await t.test('LEAD STAGE MACHINE: Invalid non-sequential stage transition throws error (FR-LEAD-03)', async () => {
-    const lead = await prisma.lead.findFirst({ where: { buyerId: testBuyer1 } });
+    const lead = await prisma.lead.findFirst({ where: { buyerId: winningBuyer } });
     
     // Lead is currently at VISIT_SCHEDULED. Attempting to directly jump to CLOSED_WON must fail.
     try {
@@ -120,5 +126,40 @@ test('Race-Condition & Lifecycle Edge-Case Integration Tests', async (t) => {
     }
   });
 
+  await t.test('LEAD IDOR GUARD: Non-owner / unauthorized user cannot transition lead stage', async () => {
+    const lead = await prisma.lead.findFirst({ where: { buyerId: winningBuyer } });
+    
+    try {
+      await updateLeadStage(lead.id, 'unauthorized-user-id-999', 'SITE_VISIT_DONE', 'Attempting unauthorized update', 'BUYER');
+      assert.fail('Should have rejected unauthorized lead stage update');
+    } catch (err) {
+      assert.strictEqual(err.code, 'FORBIDDEN');
+    }
+  });
 
+  await t.test('INTERNAL SERVICE GUARD: Rejects calls without matching x-internal-service-key', async () => {
+    const { requireInternalSecret } = await import('../src/middleware/internalAuth.middleware.js');
+    
+    // Case 1: Missing key
+    let statusCode = null;
+    let jsonBody = null;
+    const req1 = { headers: {} };
+    const res1 = {
+      status: (c) => {
+        statusCode = c;
+        return { json: (b) => { jsonBody = b; } };
+      }
+    };
+    let nextCalled = false;
+    requireInternalSecret(req1, res1, () => { nextCalled = true; });
+    assert.strictEqual(nextCalled, false);
+    assert.strictEqual(statusCode, 403);
+    assert.strictEqual(jsonBody?.error?.code, 'FORBIDDEN_INTERNAL_ACCESS');
+
+    // Case 2: Matching key
+    const req2 = { headers: { 'x-internal-service-key': 'gharsetu-internal-microservice-secure-key-2026' } };
+    let nextCalled2 = false;
+    requireInternalSecret(req2, {}, () => { nextCalled2 = true; });
+    assert.strictEqual(nextCalled2, true);
+  });
 });

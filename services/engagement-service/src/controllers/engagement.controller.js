@@ -115,6 +115,7 @@ export const getLeads = async (req, res, next) => {
 export const updateLeadStage = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
+    const role = req.user.role;
     const { leadId } = req.params;
     const validated = validator.updateLeadStageSchema.parse(req.body);
 
@@ -122,7 +123,8 @@ export const updateLeadStage = async (req, res, next) => {
       leadId,
       userId,
       validated.toStage,
-      validated.notes
+      validated.notes,
+      role
     );
 
     res.json({ success: true, message: 'Lead stage updated', data: updatedLead });

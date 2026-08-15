@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Platform Administrator",
+    "email": "admin@gharsetu.com",
+    "password": "AdminPassword123!",
+    "role": "ADMIN",
+    "phone": "+919876543210",
+    "verificationStatus": "VERIFIED",
+    "isEmailVerified": true,
+    "isActive": true
+  },
+  {
+    "name": "DLF Horizons Real Estate",
+    "email": "builder@gharsetu.com",
+    "password": "BuilderPassword123!",
+    "role": "BUILDER",
+    "phone": "+919876543211",
+    "verificationStatus": "VERIFIED",
+    "isEmailVerified": true,
+    "isActive": true
+  },
+  {
+    "name": "Metro Prime Realtors",
+    "email": "broker@gharsetu.com",
+    "password": "BrokerPassword123!",
+    "role": "BROKER",
+    "phone": "+919876543212",
+    "verificationStatus": "VERIFIED",
+    "isEmailVerified": true,
+    "isActive": true
+  },
+  {
+    "name": "Rohit Sharma",
+    "email": "buyer@gharsetu.com",
+    "password": "BuyerPassword123!",
+    "role": "BUYER",
+    "phone": "+919876543213",
+    "verificationStatus": "VERIFIED",
+    "isEmailVerified": true,
+    "isActive": true
+  }
+]

@@ -12,11 +12,12 @@ import {
   getMyBookings
 } from '../controllers/engagement.controller.js';
 import { authenticateJwt, requireRole } from '../middleware/auth.middleware.js';
+import { requireInternalSecret } from '../middleware/internalAuth.middleware.js';
 
 const router = Router();
 
 // Internal route for Listing Service booking verification (FR-REV-01)
-router.get('/internal/bookings/verify-completed', verifyCompletedBookingInternal);
+router.get('/internal/bookings/verify-completed', requireInternalSecret, verifyCompletedBookingInternal);
 
 // Availability slots management (FR-BOOK-01, UC-ES-01)
 router.post('/availability', authenticateJwt, requireRole(['SELLER', 'BROKER', 'BUILDER', 'ADMIN']), createAvailability);

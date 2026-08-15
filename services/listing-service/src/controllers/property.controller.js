@@ -5,7 +5,7 @@ import * as redisCache from '../lib/redis.js';
 
 export const createDraft = async (req, res, next) => {
   try {
-    const validated = validator.createPropertySchema.parse(req.body);
+    const validated = validator.draftPropertySchema.parse(req.body);
     const { amenities, ...propertyData } = validated;
 
     const property = await prisma.property.create({

@@ -20,7 +20,7 @@ export const checkDuplicateListings = async (req, res, next) => {
  */
 export const createDraft = async (req, res, next) => {
   try {
-    const validated = validator.createPropertySchema.parse(req.body);
+    const validated = validator.draftPropertySchema.parse(req.body);
     const { amenities, ...propertyData } = validated;
 
     const property = await prisma.property.create({
@@ -153,28 +153,78 @@ export const approveProperty = async (req, res, next) => {
 };
 
 /**
- * Admin Reject Property with Reason Enum (FR-PROP-05)
+ * Get Property Details by ID for Public / Buyer / Client Views
+ */
+export const getPropertyById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const property = await prisma.property.findUnique({
+      where: { id },
+      include: {
+        images: true,
+        amenities: { include: { amenity: true } },
+        reviews: {
+          where: { isHidden: false },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!property) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Property not found' } });
+    }
+
+    res.json({ success: true, data: property });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin Get Moderation Queue (Pending properties)
+ */
+export const getModerationQueue = async (req, res, next) => {
+  try {
+    const properties = await prisma.property.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        images: true,
+        amenities: { include: { amenity: true } }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    res.json({
+      success: true,
+      count: properties.length,
+      data: properties
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin Reject Property with Reason (FR-PROP-05)
  */
 export const rejectProperty = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const validated = validator.rejectPropertySchema.parse(req.body);
+    const rejectionReason = req.body.rejectionReason || req.body.reason || 'Failed quality or RERA compliance checks';
+    const rejectionNote = req.body.rejectionNote || req.body.note || '';
 
     const updated = await prisma.property.update({
       where: { id },
       data: {
         status: 'REJECTED',
-        rejectionReason: validated.rejectionReason,
-        rejectionNote: validated.rejectionNote,
+        rejectionReason,
+        rejectionNote,
         rejectionCount: { increment: 1 }
       }
     });
 
     res.json({ success: true, message: 'Property listing rejected', data: updated });
   } catch (error) {
-    if (error.name === 'ZodError') {
-      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0].message } });
-    }
     next(error);
   }
 };
@@ -357,3 +407,63 @@ export const submitReview = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Update Property Lifecycle Status (FR-PROP-03)
+ * PATCH /properties/:id/status
+ */
+export const updatePropertyStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId || req.user.id;
+    const userRole = req.user.role;
+    const { status } = validator.updateStatusSchema.parse(req.body);
+
+    const property = await prisma.property.findUnique({ where: { id } });
+    if (!property) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Property not found' } });
+    }
+
+    if (userRole !== 'ADMIN') {
+      if (property.ownerId !== userId) {
+        return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not own this listing' } });
+      }
+      if (!['SOLD', 'RENTED', 'ARCHIVED', 'PENDING', 'DRAFT'].includes(status)) {
+        return res.status(403).json({
+          error: {
+            code: 'FORBIDDEN',
+            message: `Only administrators can mark properties as ${status}`
+          }
+        });
+      }
+    }
+
+    const updated = await prisma.property.update({
+      where: { id },
+      data: { status }
+    });
+
+    // Invalidate Redis cache
+    await redisClient.del(`property:${id}`);
+
+    // Publish event for analytics/engagement
+    publishEvent('property.status_changed', {
+      propertyId: id,
+      ownerId: property.ownerId,
+      oldStatus: property.status,
+      newStatus: status
+    });
+
+    res.json({
+      success: true,
+      message: `Property status updated to ${status}`,
+      data: updated
+    });
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0].message } });
+    }
+    next(error);
+  }
+};
+

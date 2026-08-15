@@ -25,20 +25,64 @@ export const PropertyCompareMatrixTable = ({ comparedData }) => {
               <TableCell className="font-semibold text-muted-foreground">Price</TableCell>
               {comparedData.map((item, idx) => (
                 <TableCell key={item.id || idx} className="font-bold text-primary tabular-nums">
-                  ₹ {Number(item.price).toLocaleString('en-IN')}
+                  ₹ {Number(item.price || 0).toLocaleString('en-IN')}
                 </TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell className="font-semibold text-muted-foreground">Location</TableCell>
+              <TableCell className="font-semibold text-muted-foreground">Location & City</TableCell>
               {comparedData.map((item, idx) => (
-                <TableCell key={item.id || idx}>{item.city}</TableCell>
+                <TableCell key={item.id || idx}>
+                  {item.address ? `${item.address}, ` : ''}{item.city}
+                </TableCell>
               ))}
             </TableRow>
             <TableRow>
-              <TableCell className="font-semibold text-muted-foreground">BHK & Area</TableCell>
+              <TableCell className="font-semibold text-muted-foreground">Configuration</TableCell>
               {comparedData.map((item, idx) => (
-                <TableCell key={item.id || idx}>{item.bhk} BHK • {item.area || '1,200 sqft'}</TableCell>
+                <TableCell key={item.id || idx}>
+                  {item.bedrooms || item.bhk || 2} BHK ({item.bathrooms || 2} Baths)
+                </TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell className="font-semibold text-muted-foreground">Carpet Area</TableCell>
+              {comparedData.map((item, idx) => (
+                <TableCell key={item.id || idx}>
+                  {item.areaSqFt ? `${Number(item.areaSqFt).toLocaleString('en-IN')} sq.ft` : (item.area || 'N/A')}
+                </TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell className="font-semibold text-muted-foreground">Furnishing</TableCell>
+              {comparedData.map((item, idx) => (
+                <TableCell key={item.id || idx}>
+                  {item.furnishingStatus || 'Unfurnished'}
+                </TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell className="font-semibold text-muted-foreground">Construction Status</TableCell>
+              {comparedData.map((item, idx) => (
+                <TableCell key={item.id || idx}>
+                  {item.constructionStatus || 'Ready to Move'}
+                </TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell className="font-semibold text-muted-foreground">RERA ID</TableCell>
+              {comparedData.map((item, idx) => (
+                <TableCell key={item.id || idx} className="font-mono text-xs">
+                  {item.reraId || 'Exempt / Not Listed'}
+                </TableCell>
+              ))}
+            </TableRow>
+            <TableRow>
+              <TableCell className="font-semibold text-muted-foreground">Listing Type</TableCell>
+              {comparedData.map((item, idx) => (
+                <TableCell key={item.id || idx}>
+                  {item.listingType || 'FOR_SALE'}
+                </TableCell>
               ))}
             </TableRow>
           </TableBody>

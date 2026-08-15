@@ -422,3 +422,42 @@ export const resetPasswordWithOTP = async (req, res) => {
     return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Password reset failed.' } });
   }
 };
+
+/**
+ * Internal Endpoint for inter-service communication (e.g. Engagement Service, Listing Service)
+ */
+export const getUserStatusInternal = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'User ID is required.' } });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        verificationStatus: true,
+        isActive: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found.' } });
+    }
+
+    return res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      verificationStatus: user.verificationStatus,
+      isActive: user.isActive
+    });
+  } catch (error) {
+    return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal user lookup failed.' } });
+  }
+};

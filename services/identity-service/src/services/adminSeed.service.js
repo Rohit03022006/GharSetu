@@ -3,8 +3,8 @@ import { hashPassword } from '../services/password.service.js';
 
 export const seedDefaultAdmin = async () => {
   try {
-    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@gharsetu.com';
-    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'AdminPassword123!';
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL;
+    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
 
     const existingAdmin = await prisma.user.findFirst({
       where: {

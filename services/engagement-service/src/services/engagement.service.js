@@ -46,24 +46,32 @@ export const getAvailabilitySlots = async (propertyId, date) => {
 // --- Atomic Booking Creation & Race-Condition Prevention (FR-BOOK-02, FR-LEAD-01, UC-ES-02) ---
 export const createAtomicBooking = async (buyerId, propertyId, availabilityId, notes) => {
   const result = await prisma.$transaction(async (tx) => {
+    // Atomically claim the slot with conditional update
+    const updateResult = await tx.availabilityCalendar.updateMany({
+      where: {
+        id: availabilityId,
+        isBooked: false
+      },
+      data: {
+        isBooked: true
+      }
+    });
+
+    if (updateResult.count === 0) {
+      const slotExists = await tx.availabilityCalendar.findUnique({
+        where: { id: availabilityId }
+      });
+      if (!slotExists) {
+        throw { status: 404, code: 'SLOT_NOT_FOUND', message: 'Availability slot not found' };
+      }
+      throw { status: 409, code: 'SLOT_ALREADY_BOOKED', message: 'This time slot has already been booked by another buyer' };
+    }
+
     const slot = await tx.availabilityCalendar.findUnique({
       where: { id: availabilityId }
     });
 
-    if (!slot) {
-      throw { status: 404, code: 'SLOT_NOT_FOUND', message: 'Availability slot not found' };
-    }
-
-    if (slot.isBooked) {
-      throw { status: 409, code: 'SLOT_ALREADY_BOOKED', message: 'This time slot has already been booked by another buyer' };
-    }
-
     const ownerId = slot.ownerId || await getPropertyOwner(propertyId) || 'system-owner';
-
-    await tx.availabilityCalendar.update({
-      where: { id: availabilityId },
-      data: { isBooked: true }
-    });
 
     const booking = await tx.booking.create({
       data: {
@@ -225,29 +233,35 @@ export const rescheduleBooking = async (bookingId, userId, newAvailabilityId, no
       throw { status: 403, code: 'FORBIDDEN', message: 'Not authorized to reschedule this booking' };
     }
 
-    // Verify target availability slot
+    // Atomically claim target availability slot
+    const updateTargetResult = await tx.availabilityCalendar.updateMany({
+      where: {
+        id: newAvailabilityId,
+        isBooked: false
+      },
+      data: {
+        isBooked: true
+      }
+    });
+
+    if (updateTargetResult.count === 0) {
+      const targetSlotExists = await tx.availabilityCalendar.findUnique({
+        where: { id: newAvailabilityId }
+      });
+      if (!targetSlotExists) {
+        throw { status: 404, code: 'TARGET_SLOT_NOT_FOUND', message: 'Target availability slot not found' };
+      }
+      throw { status: 409, code: 'TARGET_SLOT_UNAVAILABLE', message: 'Reschedule failed: target time slot is already booked' };
+    }
+
     const targetSlot = await tx.availabilityCalendar.findUnique({
       where: { id: newAvailabilityId }
     });
-
-    if (!targetSlot) {
-      throw { status: 404, code: 'TARGET_SLOT_NOT_FOUND', message: 'Target availability slot not found' };
-    }
-
-    if (targetSlot.isBooked) {
-      throw { status: 409, code: 'TARGET_SLOT_UNAVAILABLE', message: 'Reschedule failed: target time slot is already booked' };
-    }
 
     // Release old availability slot
     await tx.availabilityCalendar.update({
       where: { id: booking.availabilityId },
       data: { isBooked: false }
-    });
-
-    // Lock new availability slot
-    await tx.availabilityCalendar.update({
-      where: { id: newAvailabilityId },
-      data: { isBooked: true }
     });
 
     // Update booking record
@@ -299,12 +313,16 @@ export const getLeadsForUser = async (userId, role) => {
   });
 };
 
-export const updateLeadStage = async (leadId, changedBy, toStage, notes) => {
-  return await prisma.$transaction(async (tx) => {
+export const updateLeadStage = async (leadId, changedBy, toStage, notes, role) => {
+  const result = await prisma.$transaction(async (tx) => {
     const lead = await tx.lead.findUnique({ where: { id: leadId } });
 
     if (!lead) {
       throw { status: 404, code: 'LEAD_NOT_FOUND', message: 'Lead record not found' };
+    }
+
+    if (lead.ownerId !== changedBy && role !== 'ADMIN') {
+      throw { status: 403, code: 'FORBIDDEN', message: 'Not authorized to update this lead stage' };
     }
 
     const fromStage = lead.currentStage;
